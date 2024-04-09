@@ -1,0 +1,60 @@
+version: "3"
+services:
+  restapi:
+    image: restapi
+    build:
+        context: ./crud-api-docker
+        dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    networks:
+      - restapi-network
+    environment:
+      - SGBD_HOST=mysqldb
+      - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      - mysqldb
+  consumer:
+    image: consumer
+    build:
+        context: ./consumer
+        dockerfile: Dockerfile
+    networks:
+      - restapi-network
+    environment:
+      - SGBD_HOST=mysqldb
+      - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      - mysqldb
+  mysqldb:
+    image: mysql
+    networks:
+      - restapi-network
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=restapi
+  webserver:
+    image: "nginx"
+    container_name: container-nginx
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+    command: [ nginx-debug, "-g", "daemon off;" ]
+    networks:
+      restapi-network:
+    depends_on:
+      - restapi
+  rabbitmq:
+    image: rabbitmq:management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      restapi-network:
+
+
+networks:
+  restapi-network:
